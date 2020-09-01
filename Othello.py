@@ -7,7 +7,6 @@ class Board:
     pressed=False
     updated=True
     directions=[(-1,-1),(0,-1),(1,-1),(-1,0),(1,0),(-1,1),(0,1),(1,1)]
-    winner=0
     turned=False
     text=False
     undo=False
@@ -34,6 +33,7 @@ class Board:
         self.cannotPlace=0
         self.past=[]
         self.addPast()
+        self.winner=0
         
         
     def getTile(self,x,y):

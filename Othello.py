@@ -10,6 +10,7 @@ class Board:
     winner=0
     turned=False
     text=False
+    undo=False
     def __init__(self,AItypes=(0,1),showPossible=False,showConsequence=False):
         self.showPossible=showPossible
         self.showConsequence=showConsequence
@@ -18,33 +19,52 @@ class Board:
         self.Reset()
     def Reset(self):
         self.grid=[]
-        f=[]
-        for _ in range(8):
-            f.append(0)
-        for _ in range(8):
-            self.grid.append(f.copy())
+        # f=[]
+        # for _ in range(8):
+        #     f.append(0)
+        # for _ in range(8):
+        #     self.grid.append(f.copy())
+        for _ in range(64):
+            self.grid.append(0)
         self.setTile(3,4,1)
         self.setTile(4,3,1)
         self.setTile(4,4,2)
         self.setTile(3,3,2)
         self.turn=1
         self.cannotPlace=0
+        self.past=[]
+        self.addPast()
         
         
     def getTile(self,x,y):
         if 0<=x<=7 and 0<=y<=7:
-            return self.grid[y][x]
+            return self.grid[8*y+x]
         else:
             return 7
     def setTile(self,x,y,side):
         self.updated=True
-        self.grid[y][x]=side
+        self.grid[8*y+x]=side
         #self.canvas.place(x,y,side)
     def printSelf(self):
         for i in self.grid:
             print(i)
+    def addPast(self):
+        self.past.append((self.turn,self.grid.copy()))
+    def undoPast(self):
+        if len(self.past)>1:
+            self.grid=self.past[-2][1].copy()
+            self.turn=self.past[-2][0]
+            del self.past[-1]
+            if self.AItype[self.turn-1]==1:
+                self.undoPast()
     def Update(self):
-        
+
+        if self.undo:
+            self.undoPast()
+            self.undo=False
+            self.updated=True
+            self.cannotPlace=0
+            self.winner=0
         if self.turned:
             if self.text:
                 f=self.Count()
@@ -52,6 +72,8 @@ class Board:
             self.turned=False
             self.turn=self.turn%2+1
             self.updated=True
+            if self.cannotPlace==0:
+                self.addPast()
         if self.cannotPlace<2:
             f=self.Search(self.turn)
             if f[0]==0:
@@ -245,6 +267,8 @@ def MainLoop(board):
                     board.AItype=board.AItype[0],(board.AItype[1]+1)%2
                 elif a=='k':
                     board.Reset()
+                elif a=='d':
+                    board.undo=True
                 board.updated=True
         board.Update()
 

@@ -14,20 +14,22 @@ class Board:
         self.showPossible=showPossible
         self.showConsequence=showConsequence
         self.AItype=AItypes
+        self.canvas=Draw()
+        self.Reset()
+    def Reset(self):
         self.grid=[]
         f=[]
         for _ in range(8):
             f.append(0)
         for _ in range(8):
             self.grid.append(f.copy())
-        self.turn=1
-        self.cannotPlace=0
-        self.canvas=Draw()
-        self.canvas.Grid()
         self.setTile(3,4,1)
         self.setTile(4,3,1)
         self.setTile(4,4,2)
         self.setTile(3,3,2)
+        self.turn=1
+        self.cannotPlace=0
+        
         
     def getTile(self,x,y):
         if 0<=x<=7 and 0<=y<=7:
@@ -96,7 +98,7 @@ class Board:
             self.Count(True)
             self.canvas.Grid(self.winner)
             if self.AItype[self.turn-1]==0 and self.winner==0 and not self.turned:
-                self.canvas.place(self.x,self.y,self.turn,2)
+                self.canvas.place(self.x,self.y,self.turn,2,self.getTile(self.x,self.y))
                 if self.showConsequence:
                     self.ScanDraw(self.x,self.y,self.turn)
                 if self.showPossible:
@@ -129,7 +131,7 @@ class Board:
             for i in range(8):
                 if scan[1][i]>0:
                     for k in range(scan[1][i]):
-                        self.canvas.place(x+self.directions[i][0]*(k+1),y+self.directions[i][1]*(k+1),side,1)
+                        self.canvas.place(x+self.directions[i][0]*(k+1),y+self.directions[i][1]*(k+1),side,1,self.getTile(x+self.directions[i][0]*(k+1),y+self.directions[i][1]*(k+1)))
 
     def Scan(self,x,y,d,side):
         dx,dy=d
@@ -178,30 +180,42 @@ class Draw:
         self.margins=(50,50,50,50)
         self.canvas=pygame.display.set_mode((self.size[0]+self.margins[0]+self.margins[2],self.size[1]+self.margins[1]+self.margins[3]))
     def Clear(self):
-        self.canvas.fill((0,50,0))
+        self.canvas.fill(self.color(0))
     def Update(self):
         pygame.display.update()
+    def color(self,side):
+        out=(0,50,0),(200,200,200),(0,0,0)
+        return out[side]
+    def mix(self,A,B,ratio):
+        m = lambda a,b,r : int(a*r + b*(1-r))
+        out=[]
+        for i in (0,1,2):
+            out.append(m(A[i],B[i],ratio))
+        return out[0],out[1],out[2]
+            
     def Grid(self,side=0):
-        if side==0:
-            col=(100,100,100)
-        else:
-            col=(side%2*200,side%2*200,side%2*200)
         if side!=7:
+            if side==0:
+                col=(100,100,100)
+            else:
+                col=self.color(side)
             wid=5
             for i in range(9):
                 pygame.draw.line(self.canvas,col,(self.margins[0],self.margins[1]+(i)*self.size[1]//self.dimensions[1]),(self.size[0]+self.margins[0],self.margins[1]+(i)*self.size[1]//self.dimensions[1]),wid)
             for i in range(9):
                 pygame.draw.line(self.canvas,col,(self.margins[0]+(i)*self.size[0]//self.dimensions[0],self.margins[1]),(self.margins[0]+(i)*self.size[0]//self.dimensions[0],self.size[1]+self.margins[1]),wid)
-    def place(self,x,y,side,t=0):
-        f=(0.4,0.2,0.15,0.1)[t]
-        col=(side%2*200,side%2*200,side%2*200)
+    def place(self,x,y,side,t,behind=0):
+        f=(0.4, 0.2, 0.15,0.1 )[t]
+        g=(1,   1,   0.75,0.5 )[t]
+        col=self.mix(self.color(side),self.color(behind),g)
+
         s=int(f*self.size[0]/self.dimensions[0])
         pygame.draw.circle(self.canvas,col,(int(self.margins[0]+(x+0.5)*self.size[0]/self.dimensions[0]),int(self.margins[1]+(y+0.5)*self.size[1]/self.dimensions[1])),s)
 
     def getTile(self,point):
-        a=int((point[0]-self.margins[0])/(self.size[0]/self.dimensions[0]))
-        b=int((point[1]-self.margins[1])/(self.size[1]/self.dimensions[1]))
-        return min(a,7),min(b,7)
+        a=(point[0]-self.margins[0])/self.size[0]*self.dimensions[0]
+        b=(point[1]-self.margins[1])/self.size[1]*self.dimensions[1]
+        return max(min(int(a),7),0),max(min(int(b),7),0)
 
 def MainLoop(board):
     run=True
@@ -218,6 +232,20 @@ def MainLoop(board):
                 board.updated=True
             if event.type==5 and event.__dict__['button']==1:
                 board.pressed=True
+            if event.type==2:                   # toggles: f: show valid moves, g: show result, h: AI for white, j: AI for black, k: reset
+                #a={'f':0,'g':1,'h':2,'j':3}[]
+                a=event.__dict__['unicode']
+                if a=='f':
+                    board.showPossible=not board.showPossible
+                elif a=='g':
+                    board.showConsequence=not board.showConsequence
+                elif a=='h':
+                    board.AItype=(board.AItype[0]+1)%2,board.AItype[1]
+                elif a=='j':
+                    board.AItype=board.AItype[0],(board.AItype[1]+1)%2
+                elif a=='k':
+                    board.Reset()
+                board.updated=True
         board.Update()
 
 
